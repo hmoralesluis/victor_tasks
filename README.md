@@ -131,3 +131,30 @@ Errors use the standard NestJS format:
 ```
 
 
+## Decisions
+
+- **NestJS**: it gives a clear structure (modules, controllers and services) and it is easy to test.
+- **TypeORM with migrations**: I wanted every change in the database to be written down and easy to repeat, so `synchronize` is off.
+- **PostgreSQL with Docker Compose**: anyone can start the project with one command. I thought about using a free database online, but those expire after some time, and other people could not use mine.
+- **DTOs and a global `ValidationPipe`**: fields that are not in the DTO are rejected, and the query params are changed to numbers. If the data is not valid, the API returns `400` before the logic runs.
+- **`ParseUUIDPipe` for the `id`**: if the id is not a valid UUID, the API returns `400` and not a database error.
+- **Paginated response with `{ data, meta }`**: the client gets the total and the number of pages in the same request. I also sort by `id` as a second rule, so the pages do not change order.
+- **`assignee` as plain text**: it keeps the model simple for this challenge.
+- **Two kinds of tests**: unit tests for the logic, and e2e tests with a real PostgreSQL database to check that everything works together (validation, status codes, migrations and the filters). The e2e tests use their own database, and they stop if the database name does not end with `_test`.
+
+## What I would do with more time
+
+- Make the assignee a real entity (a `users` table) and not just text.
+- Add authentication (for example JWT), so each user only sees and edits what they should.
+- Add a Dockerfile for the API and an `api` service in the compose file, to start everything with one command.
+- Add continuous integration (GitHub Actions) to run lint, unit tests and e2e tests.
+- Make the assignee filter case-insensitive and allow partial search.
+- Let the client choose the sorting, and add filters by due date.
+- Add logs and a global error handler.
+
+## How I used AI
+
+The project is small, so I mostly used AI for code completion and code suggestions.
+
+- I used it to generate the tests. I reviewed them and adjusted them by hand.
+- I used it to help me write this README.
