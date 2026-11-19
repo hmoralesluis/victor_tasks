@@ -1,132 +1,133 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Tasks API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API to manage tasks, built with **NestJS**, **TypeScript**, **TypeORM** and **PostgreSQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+It lets you create, list, view, update and delete tasks. Each task has a title, a description, a status (`pending`, `in_progress` or `done`), an assignee and a due date. The list endpoint supports filtering by status and by assignee, plus pagination.
 
-## Description
+## Requirements
+- Node.js 20 or higher and npm
+- Docker and Docker Compose (for PostgreSQL)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## How to run it
 
 ```bash
-$ npm install
+# 1. Environment variables
+cp .env.example .env
+
+# 2. Database (PostgreSQL in Docker)
+docker compose up -d
+
+# 3. Dependencies
+npm install
+
+# 4. Migrations (creates the `tasks` table)
+npm run migration:run
+
+# 5. Start the API in development mode
+npm run start:dev
 ```
 
-## Compile and run the project
+The API is available at `http://localhost:3000`.
+
+
+
+### Migrations
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run migration:generate -- src/migrations/MigrationName   # generates a migration from the entities
+npm run migration:run                                        # applies pending migrations
+npm run migration:revert                                     # reverts the last migration
 ```
 
-## Run tests
+`synchronize` is disabled: the schema only changes through migrations.
+
+## Tests
+
+The project has two kinds of tests:
+
+- **Unit tests** (`npm test`): check the service and controller logic with mocked dependencies. They need no database.
+- **End-to-end tests** (`npm run test:e2e`): start the full application and test it over HTTP against a real PostgreSQL database.
+
+Setup for the e2e tests (one time only):
 
 ```bash
-# unit tests
-$ npm run test
+# 1. Test environment variables (DB_NAME must be tasks_test)
+cp .env.test.example .env.test
 
-# e2e tests
-$ npm run test:e2e
+# 2. Create `tasks_test` database 
+docker compose exec db psql -U tasks -c "CREATE DATABASE tasks_test;"
 
-# test coverage
-$ npm run test:cov
+# 3. Apply the migrations to the test database
+npm run migration:run:test
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Then:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm test
+npm run test:e2e
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Endpoints
 
-## Observability
+| Method | Route | Description | Success | Errors |
+|---|---|---|---|---|
+| `POST` | `/tasks` | Create a task | `201` | `400` |
+| `GET` | `/tasks` | List tasks with filters and pagination | `200` | `400` |
+| `GET` | `/tasks/:id` | Get a task | `200` | `400`, `404` |
+| `PATCH` | `/tasks/:id` | Update a task (partial fields) | `200` | `400`, `404` |
+| `DELETE` | `/tasks/:id` | Delete a task | `204` | `400`, `404` |
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+- `400`: invalid data (body, query parameters, or an `id` that is not a UUID).
+- `404`: the task does not exist.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
+### Examples
 
 ```bash
-$ npx @nestjs/observe link
+# Create
+curl -X POST http://localhost:3000/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Prepare report","assignee":"Ana","dueDate":"2026-12-01"}'
+
+# List with filters and pagination
+curl "http://localhost:3000/tasks?status=pending&assignee=Ana&page=1&limit=5"
+
+# View, update and delete
+curl http://localhost:3000/tasks/<id>
+curl -X PATCH http://localhost:3000/tasks/<id> \
+  -H "Content-Type: application/json" \
+  -d '{"status":"in_progress"}'
+curl -X DELETE http://localhost:3000/tasks/<id>
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+List response:
 
-Or do it by hand:
-
-```bash
-$ npm install @nestjs/observe
+```json
+{
+  "data": [
+    {
+      "id": "0b6c1f0e-...",
+      "title": "Prepare report",
+      "description": null,
+      "status": "pending",
+      "assignee": "Ana",
+      "dueDate": "2026-12-01",
+      "createdAt": "2026-11-19T10:00:00.000Z",
+      "updatedAt": "2026-11-19T10:00:00.000Z"
+    }
+  ],
+  "meta": { "total": 1, "page": 1, "limit": 5, "totalPages": 1 }
+}
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
+Errors use the standard NestJS format:
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```json
+{
+  "message": ["title should not be empty", "property foo should not exist"],
+  "error": "Bad Request",
+  "statusCode": 400
+}
+```
 
-## Resources
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
